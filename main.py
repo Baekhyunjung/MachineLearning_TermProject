@@ -117,8 +117,8 @@ def find_best_classification(x_list, y):
     :param y: target feature
 
     return
-    list[{kmeans}, {em}, {clarans}, {affinity propagation}]
-    each dict contains best silhouette score, params, idx and best purity, params, idx.
+    list[{decisionTree}, {logisticRegression}, {svm}]
+    each dict contains best precision, recall, f1 score, params, idx.
     """
     # Models
     models = [DecisionTreeClassifier(), LogisticRegression(), svm.SVC()]
