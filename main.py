@@ -14,7 +14,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn import svm
 from sklearn.cluster import KMeans, AffinityPropagation, DBSCAN, MeanShift
 from sklearn.mixture import GaussianMixture
-from sklearn.metrics import silhouette_score, confusion_matrix, roc_curve, classification_report, make_scorer, precision_score, recall_score, f1_score, accuracy_score
+from sklearn.metrics import silhouette_score, confusion_matrix, plot_roc_curve, plot_confusion_matrix,PrecisionRecallDisplay,classification_report, make_scorer, precision_score, recall_score, f1_score, accuracy_score
 from sklearn.metrics.cluster import contingency_matrix
 from pyclustering.cluster.clarans import clarans
 
@@ -109,6 +109,32 @@ def encode_scale(df, numerical_feature_list, categorical_feature_list, target_na
     return encoded_scaled_df_list, encoded_target
 
 
+def viz_classification(model, X,y,normalize, mode = None):
+    """
+
+    :param model:
+    :param X:
+    :param y:
+    :param normalize:
+    :param mode:ROC curve, PRC, CAP curve and the confusion matrix.
+    :return:
+    """
+    """ mode - confusion_matrix """
+    if "cfm" in mode:
+        plot = plot_confusion_matrix(model,X,y,
+                                 normalize=normalize)
+        plot.ax_.set_title("Confusion Matrix")
+
+    if "roc" in mode:
+        plot = plot_roc_curve(model, X, y,)
+        plot.ax_.set_title("ROC Curve")
+
+    if "prc" in mode:
+        plot = PrecisionRecallDisplay.from_estimator(model,X,y)
+        plot.ax_.set_title("Precision-Recall curve")
+
+
+
 def find_best_classification(x_list, y):
     """
     find the set of best parameters among classification algorithms according to silhouette score and purity.
@@ -129,7 +155,8 @@ def find_best_classification(x_list, y):
                                 'min_samples_split': [2, 4, 6], 'min_samples_leaf': [1, 3, 5]}
     logistic_regression_param_grid = {'penalty': ['l2'], 'C': np.logspace(-4, 4, 20),
                                       'solver': ['newton-cg', 'lbfgs', 'liblinear']}
-    svm_param_grid = {}
+    svm_param_grid = {'C': [0.1, 1, 10, 100 ], 'kernel': ['linear', 'poly','rbf','sigmoid'],
+                      'gamma': [0.01,0.1, 1,10], 'max_iter': [100,1000,10000,-1]}
     param_grids = [decision_tree_param_grid, logistic_regression_param_grid, svm_param_grid]
 
     # Scoring criteria
@@ -178,6 +205,8 @@ def find_best_classification(x_list, y):
             print(model_name + '\'s best f1 score:\n', f1_score(test_Y, y_pred, zero_division=0))
             print()
 
+            viz_classification(grid_search_cv.best_estimator_, test_X, test_Y, normalize='all',
+                               mode=['cfm', 'roc', 'prc'])
             to_push = {'Dataset No.': idx, model_name: best_score_dict}
             best_score_dict_list.append(to_push)
 
