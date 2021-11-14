@@ -1,8 +1,11 @@
 import warnings
+from itertools import cycle
+
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler, RobustScaler
 from sklearn.model_selection import train_test_split
@@ -14,9 +17,10 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn import svm
 from sklearn.cluster import KMeans, AffinityPropagation, DBSCAN, MeanShift
 from sklearn.mixture import GaussianMixture
-from sklearn.metrics import silhouette_score, confusion_matrix, plot_roc_curve, plot_confusion_matrix,PrecisionRecallDisplay,classification_report, make_scorer, precision_score, recall_score, f1_score, accuracy_score
+from sklearn.metrics import silhouette_score, confusion_matrix, plot_roc_curve, plot_confusion_matrix, PrecisionRecallDisplay, classification_report, make_scorer, precision_score, recall_score, f1_score, accuracy_score
 from sklearn.metrics.cluster import contingency_matrix
 from pyclustering.cluster.clarans import clarans
+from sklearn.decomposition import PCA
 
 warnings.filterwarnings("ignore")
 
@@ -27,7 +31,6 @@ def auto_ml():
     # Classification
 
     # Clustering
-    findBestCluster()
 
     # ...
 
@@ -111,7 +114,6 @@ def encode_scale(df, numerical_feature_list, categorical_feature_list, target_na
 
 def viz_classification(model, X, y, normalize, mode = None):
     """
-
     :param model:
     :param X:
     :param y:
@@ -134,10 +136,6 @@ def viz_classification(model, X, y, normalize, mode = None):
         plot.ax_.set_title("Precision-Recall curve")
 
 
-def viz_clustering(){
-
-}
-
 def find_best_classification(x_list, y):
     """
     find the set of best parameters among classification algorithms according to silhouette score and purity.
@@ -148,6 +146,8 @@ def find_best_classification(x_list, y):
     return
     list[{decisionTree}, {logisticRegression}, {svm}]
     each dict contains best precision, recall, f1 score, params, idx.
+    list[{kmeans}, {em}, {clarans}, {affinity propagation}]
+    each dict contains best silhouette score, params, idx and best purity, params, idx.
     """
     # Models
     models = [DecisionTreeClassifier(), LogisticRegression(), svm.SVC()]
@@ -158,8 +158,8 @@ def find_best_classification(x_list, y):
                                 'min_samples_split': [2, 4, 6], 'min_samples_leaf': [1, 3, 5]}
     logistic_regression_param_grid = {'penalty': ['l2'], 'C': np.logspace(-4, 4, 20),
                                       'solver': ['newton-cg', 'lbfgs', 'liblinear']}
-    svm_param_grid = {'C': [0.1, 1, 10, 100 ], 'kernel': ['linear', 'poly','rbf','sigmoid'],
-                      'gamma': [0.01,0.1, 1,10], 'max_iter': [100,1000,10000,-1]}
+    svm_param_grid = {'C': [0.1, 1, 10, 100], 'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
+                      'gamma': [0.01, 0.1, 1, 10], 'max_iter': [100, 1000, 10000, -1]}
     param_grids = [decision_tree_param_grid, logistic_regression_param_grid, svm_param_grid]
 
     # Scoring criteria
@@ -210,6 +210,7 @@ def find_best_classification(x_list, y):
 
             viz_classification(grid_search_cv.best_estimator_, test_X, test_Y, normalize='all',
                                mode=['cfm', 'roc', 'prc'])
+
             to_push = {'Dataset No.': idx, model_name: best_score_dict}
             best_score_dict_list.append(to_push)
 
@@ -244,7 +245,7 @@ def findBestCluster(X, y):
     kmeans_param = {'n_clusters': [3, 4, 5, 6, 7, 10], 'algorithm': ['full', 'elkan']}
     em_param = {'n_components': [3, 5, 6, 7, 8, 10], 'covariance_type': ['full', 'tied'], 'tol': [1e-2, 1e-3, 1e-4]}
     affinity_param = {'damping': [0.3, 0.5, 0.75, 0.9]}
-    dbscan_param = {'eps': [0.3, 0.5, 0.7, 0.9], 'min_samples': [3, 4, 5, 6, 7], 'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']}
+    dbscan_param = {'eps': [0.3, 0.5, 0.7, 0.9, 1.2], 'min_samples': [3, 4, 5, 6, 7], 'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']}
     meanShift_param = {'bandwidth': [0.1, 0.3, 0.5, 1.0, 1.2, 1.4, 1.6]}
 
     for model_name in models:
@@ -295,22 +296,6 @@ def findBestCluster(X, y):
                     best_kmeans['purity idx'] = idx
 
                 idx += 1
-
-                '''
-                # plot elbow method
-                distortions = []
-                km = KMeans(best_kmeans['silhouette param'])
-                km.fit(x)
-                distortions.append(km.inerita_)
-
-                plt.figure(fizsize=(16,8))
-                plt.plot(range(1,10), distortions, 'bx-')
-                plt.xlabel('k')
-                plt.ylabel('Distortion')
-                plt.title('The Elbow Method showing the optimal k')
-                plt.show()
-                '''
-
 
         elif model_name == 'em':
             model = GaussianMixture()
@@ -407,6 +392,134 @@ def findBestCluster(X, y):
     return result
 
 
+# Plot clustering results
+def plotClustering(X, param_list):
+    # Reduce number of predictor features using PCA
+    x_pca = []
+    for x in X:
+        pca = PCA(n_components=2)
+        data_pca = pca.fit_transform(x)
+        x_pca.append(data_pca)
+
+    for i in range(0,4):
+        param = param_list[i]
+
+        # KMeans
+        if i == 0:
+            # Plot the cluster with the highest silhouette score.
+            data = x_pca[param['silhouette idx']]
+            model = KMeans(n_clusters=param['silhouette param']['n_clusters'], algorithm=param['silhouette param']['algorithm'])
+            label = model.fit_predict(data)
+
+            u_labels = np.unique(label)
+            centroids = np.array(model.cluster_centers_)
+            for k in u_labels:
+                plt.scatter(data[label==k, 0], data[label==k, 1], label=k)
+            plt.scatter(centroids[:,0], centroids[:,1], s=80, marker='x', color='k')
+            plt.legend()
+            plt.show()
+
+            # Plot the cluster with the highest purity.
+            data = x_pca[param['purity idx']]
+            model = KMeans(n_clusters=param['purity param']['n_clusters'],
+                           algorithm=param['purity param']['algorithm'])
+            label = model.fit_predict(data)
+
+            u_labels = np.unique(label)
+            centroids = np.array(model.cluster_centers_)
+            for k in u_labels:
+                plt.scatter(data[label == k, 0], data[label == k, 1], label=k)
+            plt.scatter(centroids[:, 0], centroids[:, 1], s=80, marker='x', color='k')
+            plt.legend()
+            plt.show()
+        
+        # GaussianMixture(EM)
+        elif i == 1:
+            # Plot the cluster with the highest silhouette score.
+            data = x_pca[param['silhouette idx']]
+            model = GaussianMixture(n_components=param['silhouette param']['n_components'], covariance_type=param['silhouette param']['covariance_type'], tol=param['silhouette param']['tol'])
+            label = model.fit_predict(data)
+
+            u_labels = np.unique(label)
+            for k in u_labels:
+                plt.scatter(data[label == k, 0], data[label == k, 1], label=k)
+            plt.legend()
+            plt.show()
+
+            # # Plot the cluster with the highest purity.
+            data = x_pca[param['purity idx']]
+            model = GaussianMixture(n_components=param['purity param']['n_components'],
+                                    covariance_type=param['purity param']['covariance_type'],
+                                    tol=param['purity param']['tol'])
+            label = model.fit_predict(data)
+
+            u_labels = np.unique(label)
+            for k in u_labels:
+                plt.scatter(data[label == k, 0], data[label == k, 1], label=k)
+            plt.legend()
+            plt.show()
+        
+        # DBSCAN
+        elif i == 2:
+            # Plot the cluster with the highest silhouette score.
+            data = x_pca[param['silhouette idx']]
+            model = DBSCAN(eps=param['silhouette param']['eps'], min_samples=param['silhouette param']['min_samples'], algorithm=param['silhouette param']['algorithm']).fit(data)
+            core_samples_mask = np.zeros_like(model.labels_, dtype=bool)
+            core_samples_mask[model.core_sample_indices_] = True
+            labels = model.labels_
+
+            u_labels = set(labels)
+            colors = [plt.cm.Spectral(each) for each in np.linspace(0,1,len(u_labels))]
+            for k, col in zip(u_labels, colors):
+                if k==-1:
+                    col = [0,0,0,1]
+                class_member_mask = labels == k
+
+                xy = data[class_member_mask & core_samples_mask]
+                plt.plot(xy[:,0], xy[:,1], "o", markerfacecolor=tuple(col), markeredgecolor="k")
+
+                xy = data[class_member_mask & ~core_samples_mask]
+                plt.plot(xy[:,0], xy[:, 1], "o", markerfacecolor=tuple(col), markeredgecolor="k")
+            plt.show()
+
+        # MeanShift
+        elif i == 3:
+            # Plot the cluster with the highest silhouette score.
+            data = x_pca[param['silhouette idx']]
+            model = MeanShift(bandwidth=param['silhouette param']['bandwidth'])
+            model.fit(data)
+            labels = model.labels_
+            cluster_centers = model.cluster_centers_
+
+            u_labels = np.unique(labels)
+            n_clusters_ = len(u_labels)
+
+            colors = cycle("bgrcmykbgrcmykbgrcmykbgrcmyk")
+            for k, col in zip(range(n_clusters_), colors):
+                my_members = labels == k
+                cluster_center = cluster_centers[k]
+                plt.plot(data[my_members, 0], data[my_members, 1], col+".")
+                plt.plot(cluster_center[0], cluster_center[1], "o", markerfacecolor=col, markeredgecolor="k")
+            plt.show()
+
+            # Plot the cluster with the highest purity.
+            data = x_pca[param['purity idx']]
+            model = MeanShift(bandwidth=param['silhouette param']['bandwidth'])
+            model.fit(data)
+            labels = model.labels_
+            cluster_centers = model.cluster_centers_
+
+            u_labels = np.unique(labels)
+            n_clusters_ = len(u_labels)
+
+            colors = cycle("bgrcmykbgrcmykbgrcmykbgrcmyk")
+            for k, col in zip(range(n_clusters_), colors):
+                my_members = labels == k
+                cluster_center = cluster_centers[k]
+                plt.plot(data[my_members, 0], data[my_members, 1], col + ".")
+                plt.plot(cluster_center[0], cluster_center[1], "o", markerfacecolor=col, markeredgecolor="k")
+            plt.show()
+
 
 # Read the dataset
 original = pd.read_csv('C:\\Users\\82109\\OneDrive\\문서\\software\\3-2\\ML\\termProject\\credit_dataset.csv', index_col=0)
@@ -423,8 +536,8 @@ original.apply(pd.unique)
 data = original.drop(["ID", "FLAG_MOBIL"], axis=1)
 
 # Feature selection using correlation
-sns.heatmap(data.corr(), annot=True, fmt="0.2f")
-# plt.show()
+#sns.heatmap(data.corr(), annot=True, fmt="0.2f")
+#plt.show()
 
 # 다 낮아서 다른 방법으로 진행했습니다.
 
@@ -485,6 +598,7 @@ for x in preprocessed_dataset_list:
 #print(sfm_fs)
 # 위 네 개의 리스트 요소에는 Index: 0 - Standard, 1 - MinMax, 2 - MaxAbs, 3 - Robust 로 스케일링 된 데이터에서 뽑은 features 가 들어 있습니다.
 
+
 intuitive_cluster = findBestCluster(intuitive_fs, preprocessed_target)
 print(intuitive_cluster)
 kBest_cluster = findBestCluster(kBest_fs, preprocessed_target)
@@ -495,4 +609,15 @@ sfm_cluster = findBestCluster(sfm_fs, preprocessed_target)
 print(sfm_cluster)
 # 각 변수는 [{kmeans}, {em}, {clarans}, {affinity propagation}]에 대한 정보를 담고 있음
 # 각 모델의 dict는 'best similarity score'와 그 param, idx, 'best purity'와 그 param, idx가 들어있음
-# clarans의 purity는 구할 수 없어 clarans의 purity 부분은 비어있음
+# dbscan의 purity 부분은 비어있음
+
+#intuitive_cluster : [{'silhouette score': 0.27899950197457507, 'silhouette param': {'algorithm': 'full', 'n_clusters': 3}, 'silhouette idx': 2, 'purity': 0.983209994429856, 'purity param': {'algorithm': 'full', 'n_clusters': 3}, 'purity idx': 0}, {'silhouette score': 0.2758262732826268, 'silhouette param': {'covariance_type': 'tied', 'n_components': 3, 'tol': 0.01}, 'silhouette idx': 2, 'purity': 0.983209994429856, 'purity param': {'covariance_type': 'full', 'n_components': 3, 'tol': 0.001}, 'purity idx': 0}, {'silhouette score': 0.1707595538855199, 'silhouette param': {'eps': 0.9, 'min_samples': 7, 'algorithm': 'auto'}, 'silhouette idx': 0}, {'silhouette score': 0.462005785907403, 'silhouette param': {'bandwidth': 1.4}, 'silhouette idx': 0, 'purity': 0.983209994429856, 'purity param': {'bandwidth': 1.4}, 'purity idx': 0}]
+#kBest_cluster : [{'silhouette score': 0.38545980074350467, 'silhouette param': {'algorithm': 'elkan', 'n_clusters': 3}, 'silhouette idx': 0, 'purity': 0.983209994429856, 'purity param': {'algorithm': 'elkan', 'n_clusters': 3}, 'purity idx': 0}, {'silhouette score': 0.41824588689897774, 'silhouette param': {'covariance_type': 'tied', 'n_components': 3, 'tol': 0.0001}, 'silhouette idx': 0, 'purity': 0.983209994429856, 'purity param': {'covariance_type': 'tied', 'n_components': 3, 'tol': 0.0001}, 'purity idx': 0}, {'silhouette score': 0.22439905023427814, 'silhouette param': {'eps': 0.7, 'min_samples': 4, 'algorithm': 'auto'}, 'silhouette idx': 1}, {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None, 'purity': None, 'purity param': None, 'purity idx': None}]
+#rfe_cluster : [{'silhouette score': 0.49063904363851046, 'silhouette param': {'algorithm': 'elkan', 'n_clusters': 4}, 'silhouette idx': 1, 'purity': 0.983209994429856, 'purity param': {'algorithm': 'elkan', 'n_clusters': 3}, 'purity idx': 0}, {'silhouette score': 0.49769838389987175, 'silhouette param': {'covariance_type': 'full', 'n_components': 3, 'tol': 0.001}, 'silhouette idx': 0, 'purity': 0.983209994429856, 'purity param': {'covariance_type': 'full', 'n_components': 3, 'tol': 0.001}, 'purity idx': 0}, {'silhouette score': 0.46404312507942935, 'silhouette param': {'eps': 0.3, 'min_samples': 7, 'algorithm': 'auto'}, 'silhouette idx': 2}, {'silhouette score': 0.49694479876924436, 'silhouette param': {'bandwidth': 1.6}, 'silhouette idx': 0, 'purity': 0.983209994429856, 'purity param': {'bandwidth': 1.6}, 'purity idx': 0}]
+#sfm_cluster : [{'silhouette score': 0.3475955441757038, 'silhouette param': {'algorithm': 'full', 'n_clusters': 4}, 'silhouette idx': 2, 'purity': 0.983209994429856, 'purity param': {'algorithm': 'elkan', 'n_clusters': 4}, 'purity idx': 0}, {'silhouette score': 0.3766163792512006, 'silhouette param': {'covariance_type': 'tied', 'n_components': 3, 'tol': 0.001}, 'silhouette idx': 1, 'purity': 0.983209994429856, 'purity param': {'covariance_type': 'tied', 'n_components': 3, 'tol': 0.01}, 'purity idx': 0}, {'silhouette score': 0.21031126008068732, 'silhouette param': {'eps': 0.9, 'min_samples': 7, 'algorithm': 'auto'}, 'silhouette idx': 1}, {'silhouette score': 0.3017439078927355, 'silhouette param': {'bandwidth': 1.6}, 'silhouette idx': 3, 'purity': 0.983209994429856, 'purity param': {'bandwidth': 1.6}, 'purity idx': 0}]
+
+plotClustering(intuitive_fs, intuitive_cluster)
+plotClustering(kBest_fs, kBest_cluster)
+plotClustering(rfe_fs, rfe_cluster)
+plotClustering(sfm_fs, sfm_cluster)
+
