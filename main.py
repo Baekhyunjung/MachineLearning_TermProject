@@ -144,8 +144,8 @@ def find_best_classification(x_list, y):
     :param y: target feature
 
     return
-    list[{kmeans}, {em}, {clarans}, {affinity propagation}]
-    each dict contains best silhouette score, params, idx and best purity, params, idx.
+    list[{decisionTree}, {logisticRegression}, {svm}]
+    each dict contains best precision, recall, f1 score, params, idx.
     """
     # Models
     models = [DecisionTreeClassifier(), LogisticRegression(), svm.SVC()]
@@ -534,8 +534,8 @@ original.apply(pd.unique)
 data = original.drop(["ID", "FLAG_MOBIL"], axis=1)
 
 # Feature selection using correlation
-#sns.heatmap(data.corr(), annot=True, fmt="0.2f")
-#plt.show()
+sns.heatmap(data.corr(), annot=True, fmt="0.2f")
+plt.show()
 
 # 다 낮아서 다른 방법으로 진행했습니다.
 
