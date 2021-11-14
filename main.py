@@ -109,7 +109,7 @@ def encode_scale(df, numerical_feature_list, categorical_feature_list, target_na
     return encoded_scaled_df_list, encoded_target
 
 
-def viz_classification(model, X,y,normalize, mode = None):
+def viz_classification(model, X, y, normalize, mode = None):
     """
 
     :param model:
@@ -134,6 +134,9 @@ def viz_classification(model, X,y,normalize, mode = None):
         plot.ax_.set_title("Precision-Recall curve")
 
 
+def viz_clustering(){
+
+}
 
 def find_best_classification(x_list, y):
     """
