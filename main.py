@@ -391,7 +391,7 @@ def findBestCluster(X, y):
 
 
 # Plot clustering results
-def plotClustering(X, param_list):
+def plotCluster(X, param_list):
     # Reduce number of predictor features using PCA
     x_pca = []
     for x in X:
@@ -401,6 +401,8 @@ def plotClustering(X, param_list):
 
     for i in range(0,4):
         param = param_list[i]
+        if param['silhouette score'] == None:
+            return
 
         # KMeans
         if i == 0:
@@ -414,6 +416,7 @@ def plotClustering(X, param_list):
             for k in u_labels:
                 plt.scatter(data[label==k, 0], data[label==k, 1], label=k)
             plt.scatter(centroids[:,0], centroids[:,1], s=80, marker='x', color='k')
+            plt.title("KMeans\nBest Silhouette")
             plt.legend()
             plt.show()
 
@@ -428,6 +431,7 @@ def plotClustering(X, param_list):
             for k in u_labels:
                 plt.scatter(data[label == k, 0], data[label == k, 1], label=k)
             plt.scatter(centroids[:, 0], centroids[:, 1], s=80, marker='x', color='k')
+            plt.title("KMeans\nBest Purity")
             plt.legend()
             plt.show()
         
@@ -441,6 +445,7 @@ def plotClustering(X, param_list):
             u_labels = np.unique(label)
             for k in u_labels:
                 plt.scatter(data[label == k, 0], data[label == k, 1], label=k)
+            plt.title("EM\nBest Silhouette")
             plt.legend()
             plt.show()
 
@@ -454,6 +459,7 @@ def plotClustering(X, param_list):
             u_labels = np.unique(label)
             for k in u_labels:
                 plt.scatter(data[label == k, 0], data[label == k, 1], label=k)
+            plt.title("EM\nBest Purity")
             plt.legend()
             plt.show()
         
@@ -478,6 +484,7 @@ def plotClustering(X, param_list):
 
                 xy = data[class_member_mask & ~core_samples_mask]
                 plt.plot(xy[:,0], xy[:, 1], "o", markerfacecolor=tuple(col), markeredgecolor="k")
+            plt.title("DBSCAN\nBest Silhouette")
             plt.show()
 
         # MeanShift
@@ -498,6 +505,7 @@ def plotClustering(X, param_list):
                 cluster_center = cluster_centers[k]
                 plt.plot(data[my_members, 0], data[my_members, 1], col+".")
                 plt.plot(cluster_center[0], cluster_center[1], "o", markerfacecolor=col, markeredgecolor="k")
+            plt.title("MeanShift\nBest Silhouette")
             plt.show()
 
             # Plot the cluster with the highest purity.
@@ -516,6 +524,7 @@ def plotClustering(X, param_list):
                 cluster_center = cluster_centers[k]
                 plt.plot(data[my_members, 0], data[my_members, 1], col + ".")
                 plt.plot(cluster_center[0], cluster_center[1], "o", markerfacecolor=col, markeredgecolor="k")
+            plt.title("MeanShift\nBest Purity")
             plt.show()
 
 
@@ -609,13 +618,8 @@ print(sfm_cluster)
 # 각 모델의 dict는 'best similarity score'와 그 param, idx, 'best purity'와 그 param, idx가 들어있음
 # dbscan의 purity 부분은 비어있음
 
-#intuitive_cluster : [{'silhouette score': 0.27899950197457507, 'silhouette param': {'algorithm': 'full', 'n_clusters': 3}, 'silhouette idx': 2, 'purity': 0.983209994429856, 'purity param': {'algorithm': 'full', 'n_clusters': 3}, 'purity idx': 0}, {'silhouette score': 0.2758262732826268, 'silhouette param': {'covariance_type': 'tied', 'n_components': 3, 'tol': 0.01}, 'silhouette idx': 2, 'purity': 0.983209994429856, 'purity param': {'covariance_type': 'full', 'n_components': 3, 'tol': 0.001}, 'purity idx': 0}, {'silhouette score': 0.1707595538855199, 'silhouette param': {'eps': 0.9, 'min_samples': 7, 'algorithm': 'auto'}, 'silhouette idx': 0}, {'silhouette score': 0.462005785907403, 'silhouette param': {'bandwidth': 1.4}, 'silhouette idx': 0, 'purity': 0.983209994429856, 'purity param': {'bandwidth': 1.4}, 'purity idx': 0}]
-#kBest_cluster : [{'silhouette score': 0.38545980074350467, 'silhouette param': {'algorithm': 'elkan', 'n_clusters': 3}, 'silhouette idx': 0, 'purity': 0.983209994429856, 'purity param': {'algorithm': 'elkan', 'n_clusters': 3}, 'purity idx': 0}, {'silhouette score': 0.41824588689897774, 'silhouette param': {'covariance_type': 'tied', 'n_components': 3, 'tol': 0.0001}, 'silhouette idx': 0, 'purity': 0.983209994429856, 'purity param': {'covariance_type': 'tied', 'n_components': 3, 'tol': 0.0001}, 'purity idx': 0}, {'silhouette score': 0.22439905023427814, 'silhouette param': {'eps': 0.7, 'min_samples': 4, 'algorithm': 'auto'}, 'silhouette idx': 1}, {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None, 'purity': None, 'purity param': None, 'purity idx': None}]
-#rfe_cluster : [{'silhouette score': 0.49063904363851046, 'silhouette param': {'algorithm': 'elkan', 'n_clusters': 4}, 'silhouette idx': 1, 'purity': 0.983209994429856, 'purity param': {'algorithm': 'elkan', 'n_clusters': 3}, 'purity idx': 0}, {'silhouette score': 0.49769838389987175, 'silhouette param': {'covariance_type': 'full', 'n_components': 3, 'tol': 0.001}, 'silhouette idx': 0, 'purity': 0.983209994429856, 'purity param': {'covariance_type': 'full', 'n_components': 3, 'tol': 0.001}, 'purity idx': 0}, {'silhouette score': 0.46404312507942935, 'silhouette param': {'eps': 0.3, 'min_samples': 7, 'algorithm': 'auto'}, 'silhouette idx': 2}, {'silhouette score': 0.49694479876924436, 'silhouette param': {'bandwidth': 1.6}, 'silhouette idx': 0, 'purity': 0.983209994429856, 'purity param': {'bandwidth': 1.6}, 'purity idx': 0}]
-#sfm_cluster : [{'silhouette score': 0.3475955441757038, 'silhouette param': {'algorithm': 'full', 'n_clusters': 4}, 'silhouette idx': 2, 'purity': 0.983209994429856, 'purity param': {'algorithm': 'elkan', 'n_clusters': 4}, 'purity idx': 0}, {'silhouette score': 0.3766163792512006, 'silhouette param': {'covariance_type': 'tied', 'n_components': 3, 'tol': 0.001}, 'silhouette idx': 1, 'purity': 0.983209994429856, 'purity param': {'covariance_type': 'tied', 'n_components': 3, 'tol': 0.01}, 'purity idx': 0}, {'silhouette score': 0.21031126008068732, 'silhouette param': {'eps': 0.9, 'min_samples': 7, 'algorithm': 'auto'}, 'silhouette idx': 1}, {'silhouette score': 0.3017439078927355, 'silhouette param': {'bandwidth': 1.6}, 'silhouette idx': 3, 'purity': 0.983209994429856, 'purity param': {'bandwidth': 1.6}, 'purity idx': 0}]
-
-plotClustering(intuitive_fs, intuitive_cluster)
-plotClustering(kBest_fs, kBest_cluster)
-plotClustering(rfe_fs, rfe_cluster)
-plotClustering(sfm_fs, sfm_cluster)
+plotCluster(intuitive_fs, intuitive_cluster)
+plotCluster(kBest_fs, kBest_cluster)
+plotCluster(rfe_fs, rfe_cluster)
+plotCluster(sfm_fs, sfm_cluster)
 
