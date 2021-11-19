@@ -1,30 +1,27 @@
 import warnings
-<<<<<<< HEAD
 from collections import Counter
 from itertools import cycle
 
-=======
->>>>>>> b2f9e53dbe2aea4e98e5097ec0c1a18c30385c41
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from itertools import cycle
 from matplotlib.colors import LogNorm
+from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler, RobustScaler
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, OrdinalEncoder, StandardScaler, MinMaxScaler, MaxAbsScaler, RobustScaler
 from sklearn.feature_selection import SelectKBest, RFE, SelectFromModel, f_classif
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split, KFold, GridSearchCV
 from sklearn.naive_bayes import GaussianNB
-from sklearn import svm
 from sklearn.tree import DecisionTreeClassifier
+from sklearn import svm
 from sklearn.cluster import KMeans, AffinityPropagation, DBSCAN, MeanShift
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score, confusion_matrix, plot_roc_curve, plot_confusion_matrix, PrecisionRecallDisplay, classification_report, make_scorer, precision_score, recall_score, f1_score, accuracy_score
 from sklearn.metrics.cluster import contingency_matrix
+from pyclustering.cluster.clarans import clarans
 from sklearn.decomposition import PCA
-<<<<<<< HEAD
 from imblearn.over_sampling import SMOTE
 
 warnings.filterwarnings("ignore")
@@ -118,85 +115,6 @@ def auto_ml(df):
     k_best_cluster = findBestCluster(kBest_fs, preprocessed_target_smote)
     rfe_cluster = findBestCluster(rfe_fs, preprocessed_target_smote)
     sfm_cluster = findBestCluster(sfm_fs, preprocessed_target_smote)
-=======
-from pyclustering.cluster.clarans import clarans
-
-warnings.filterwarnings("ignore")
-
-
-def auto_ml(df):
-    # Data preprocessing
-    df.apply(pd.unique)
-
-    # Calculate correlation for feature selection
-    sns.heatmap(data.corr(), annot=True, fmt="0.2f")
-    plt.show()
-
-    # preprocessed_dataset_list: Index = 0 - Standard, 1 - MinMax, 2 - MaxAbs, 3 - Robust scaled data
-    preprocessed_dataset_list, preprocessed_target = encode_scale(df,
-                                                                  ["NO_OF_CHILD", "INCOME", "WORK_PHONE", "PHONE",
-                                                                   "E_MAIL", "FAMILY SIZE", "BEGIN_MONTH", "AGE",
-                                                                   "YEARS_EMPLOYED"],
-                                                                  ["GENDER", "CAR", "REALITY", "INCOME_TYPE",
-                                                                   "EDUCATION_TYPE", "FAMILY_TYPE", "HOUSE_TYPE",
-                                                                   "TARGET"],
-                                                                  "TARGET",
-                                                                  scalers=[StandardScaler(), MinMaxScaler(),
-                                                                           MaxAbsScaler(), RobustScaler()],
-                                                                  encoders=[LabelEncoder()])
-
-    # Feature selection - Intuition due to no high correlated features with the target
-    intuitive_fs = []
-    for dataset in preprocessed_dataset_list:
-        intuitive_fs.append(dataset[["CAR", "REALITY", "EDUCATION_TYPE", "INCOME", "WORK_PHONE", "PHONE", "AGE"]])
-
-    # Feature selection - SelectKBest
-    kBest_fs = []
-    print('SelectKBest')
-    for x in preprocessed_dataset_list:
-        train_X, test_X, train_y, test_y = train_test_split(x, preprocessed_target, test_size=0.2)
-        model = SelectKBest(score_func=f_classif, k=4)
-        kBest = model.fit(train_X, train_y)
-        support = kBest.get_support()
-        features = x.columns
-        print(features[support])
-        new_X = x.loc[:, features[support]]
-        kBest_fs.append(new_X)
-
-    # Feature selection - RFE
-    rfe_fs = []
-    print('RFE')
-    for x in preprocessed_dataset_list:
-        train_X, test_X, train_y, test_y = train_test_split(x, preprocessed_target, test_size=0.2)
-        model = LogisticRegression()
-        rfe = RFE(model, n_features_to_select=4)
-        fit = rfe.fit(train_X, train_y)
-        support = fit.get_support()
-        features = x.columns
-        print(features[support])
-        new_X = x.loc[:, features[support]]
-        rfe_fs.append(new_X)
-
-    # Feature selection - SelectFromModel
-    sfm_fs = []
-    print('SelectFromModel')
-    for x in preprocessed_dataset_list:
-        train_X, test_X, train_y, test_y = train_test_split(x, preprocessed_target, test_size=0.2)
-        selector = SelectFromModel(estimator=LogisticRegression()).fit(train_X, train_y)
-        features = x.columns
-        print(features[selector.get_support()])
-        new_X = x.loc[:, features[selector.get_support()]]
-        sfm_fs.append(new_X)
-
-    # Classification
-    find_best_classification(kBest_fs, preprocessed_target)
-
-    # Clustering
-    intuitive_cluster = findBestCluster(intuitive_fs, preprocessed_target)
-    k_best_cluster = findBestCluster(kBest_fs, preprocessed_target)
-    rfe_cluster = findBestCluster(rfe_fs, preprocessed_target)
-    sfm_cluster = findBestCluster(sfm_fs, preprocessed_target)
->>>>>>> b2f9e53dbe2aea4e98e5097ec0c1a18c30385c41
 
     plotCluster(intuitive_fs, intuitive_cluster)
     plotCluster(kBest_fs, k_best_cluster)
@@ -281,18 +199,19 @@ def encode_scale(df, numerical_feature_list, categorical_feature_list, target_na
     return encoded_scaled_df_list, encoded_target
 
 
-def viz_classification(model, X, y, normalize, mode=None):
+def viz_classification(model, X, y, normalize, mode = None):
     """
     :param model:
     :param X:
     :param y:
     :param normalize:
-    :param mode: ROC curve, PRC, CAP curve and the confusion matrix.
+    :param mode:ROC curve, PRC, CAP curve and the confusion matrix.
     :return:
     """
-    # mode - confusion_matrix
+    """ mode - confusion_matrix """
     if "cfm" in mode:
-        plot = plot_confusion_matrix(model, X, y, normalize=normalize)
+        plot = plot_confusion_matrix(model,X,y,
+                                 normalize=normalize)
         plot.ax_.set_title("Confusion Matrix")
 
     if "roc" in mode:
@@ -300,7 +219,7 @@ def viz_classification(model, X, y, normalize, mode=None):
         plot.ax_.set_title("ROC Curve")
 
     if "prc" in mode:
-        plot = PrecisionRecallDisplay.from_estimator(model, X, y)
+        plot = PrecisionRecallDisplay.from_estimator(model,X,y)
         plot.ax_.set_title("Precision-Recall curve")
 
 
@@ -335,18 +254,11 @@ def find_best_classification(x_list, y):
     best_score_dict_list = []
 
     for idx, data_x in enumerate(x_list):
-<<<<<<< HEAD
         x_train, x_test, y_train, y_test = train_test_split(data_x, y[idx], shuffle=True, stratify=y)
         print('No.' + str(idx + 1) + ' Dataset')
         for classification_model, model_name, param_grid in zip(models, model_names, param_grids):
             grid_search_cv = GridSearchCV(classification_model, param_grid, scoring=scorers, refit='recall_score', cv=3,
                                           verbose=1)
-=======
-        x_train, x_test, y_train, y_test = train_test_split(data_x, y, shuffle=True, stratify=y)
-        print('No.' + str(idx + 1) + ' Dataset')
-        for classification_model, model_name, param_grid in zip(models, model_names, param_grids):
-            grid_search_cv = GridSearchCV(classification_model, param_grid, scoring=scorers, refit='recall_score', cv=3, verbose=1)
->>>>>>> b2f9e53dbe2aea4e98e5097ec0c1a18c30385c41
             grid_search_cv.fit(x_train, y_train)
             y_pred = grid_search_cv.predict(x_test)
 
@@ -387,7 +299,7 @@ def find_best_classification(x_list, y):
 
 
 def findBestCluster(X, y):
-    """
+    '''
     find set of best parameters of each cluster algorithm according to silhouette score and purity.
 
     :param X: list of data scaled with each scaler
@@ -396,16 +308,16 @@ def findBestCluster(X, y):
     return
     list[{kmeans}, {em}, {clarans}, {affinity propagation}]
     each dict contains best silhouette score, params, idx and best purity, params, idx.
-    """
+    '''
 
     best_kmeans = {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None,
                    'purity': None, 'purity param': None, 'purity idx': None}
     best_em = {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None,
                'purity': None, 'purity param': None, 'purity idx': None}
     best_dbscan = {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None,
-                   'purity': None, 'purity param': None, 'purity idx': None}
+               'purity': None, 'purity param': None, 'purity idx': None}
     best_meanShift = {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None,
-                      'purity': None, 'purity param': None, 'purity idx': None}
+               'purity': None, 'purity param': None, 'purity idx': None}
 
     #models = ['kmeans', 'em', 'dbscan', 'meanShift']
     models = ['kmeans']
@@ -416,36 +328,8 @@ def findBestCluster(X, y):
 
     for model_name in models:
 
-<<<<<<< HEAD
         # KMeans
         if model_name == 'kmeans':
-=======
-        if model_name == 'clarans':
-            idx = 0
-            for x in enumerate(X):
-                input = x[1].values.tolist()
-                for num_cluster in clarans_param['number_clusters']:
-                    for num_local in clarans_param['numlocal']:
-                        for max_nb in clarans_param['maxneighbor']:
-                            cluster = clarans(input, num_cluster, num_local, max_nb)
-                            cluster.process()
-
-                            predict = np.zeros((len(input)))
-                            i = 1
-                            for ip in cluster.get_clusters():
-                                for k in ip:
-                                    predict[k] = i
-                                i += 1
-
-                            silhouette = silhouette_score(input, predict, metric='euclidean')
-                            if best_clarans['silhouette score'] is None or best_clarans['silhouette score'] < silhouette:
-                                best_clarans['silhouette score'] = silhouette
-                                best_clarans['silhouette param'] = {'number_clusters': num_cluster, 'numlocal': num_local, 'maxneighbor': max_nb}
-                                best_clarans['silhouette idx'] = idx
-                idx += 1
-
-        elif model_name == 'kmeans':
->>>>>>> b2f9e53dbe2aea4e98e5097ec0c1a18c30385c41
             model = KMeans()
             idx = 0
             for x in X:
@@ -454,14 +338,14 @@ def findBestCluster(X, y):
                 predict = cluster.predict(x)
 
                 silhouette = silhouette_score(x, predict, metric='euclidean')
-                if best_kmeans['silhouette score'] is None or best_kmeans['silhouette score'] < silhouette:
+                if best_kmeans['silhouette score'] == None or best_kmeans['silhouette score'] < silhouette:
                     best_kmeans['silhouette score'] = silhouette
                     best_kmeans['silhouette param'] = cluster.best_params_
                     best_kmeans['silhouette idx'] = idx
 
                 p = contingency_matrix(y[idx], predict)
                 purity = np.sum(np.amax(p, axis=0)) / np.sum(p)
-                if best_kmeans['purity'] is None or best_kmeans['purity'] < purity:
+                if best_kmeans['purity'] == None or best_kmeans['purity'] < purity:
                     best_kmeans['purity'] = purity
                     best_kmeans['purity param'] = cluster.best_params_
                     best_kmeans['purity idx'] = idx
@@ -478,14 +362,14 @@ def findBestCluster(X, y):
                 predict = cluster.predict(x)
 
                 silhouette = silhouette_score(x, predict, metric='euclidean')
-                if best_em['silhouette score'] is None or best_em['silhouette score'] < silhouette:
+                if best_em['silhouette score'] == None or best_em['silhouette score'] < silhouette:
                     best_em['silhouette score'] = silhouette
                     best_em['silhouette param'] = cluster.best_params_
                     best_em['silhouette idx'] = idx
 
                 p = contingency_matrix(y[idx], predict)
                 purity = np.sum(np.amax(p, axis=0)) / np.sum(p)
-                if best_em['purity'] is None or best_em['purity'] < purity:
+                if best_em['purity'] == None or best_em['purity'] < purity:
                     best_em['purity'] = purity
                     best_em['purity param'] = cluster.best_params_
                     best_em['purity idx'] = idx
@@ -499,7 +383,6 @@ def findBestCluster(X, y):
                 input = x[1].values.tolist()
                 for eps_value in dbscan_param['eps']:
                     for minSamples in dbscan_param['min_samples']:
-<<<<<<< HEAD
                         cluster = DBSCAN(eps=eps_value, min_samples=minSamples)
                         cluster.fit(input)
                         core_samples_mask = np.zeros_like(cluster.labels_, dtype=bool)
@@ -511,21 +394,6 @@ def findBestCluster(X, y):
                             best_dbscan['silhouette score'] = silhouette
                             best_dbscan['silhouette param'] = {'eps': eps_value, 'min_samples': minSamples}
                             best_dbscan['silhouette idx'] = idx
-=======
-                        for algo in dbscan_param['algorithm']:
-                            cluster = DBSCAN(eps=eps_value, min_samples=minSamples, algorithm=algo)
-                            cluster.fit(input)
-                            core_samples_mask = np.zeros_like(cluster.labels_, dtype=bool)
-                            core_samples_mask[cluster.core_sample_indices_] = True
-                            labels = cluster.labels_
-
-                            silhouette = silhouette_score(input, labels)
-                            if best_dbscan['silhouette score'] is None or best_dbscan['silhouette score'] < silhouette:
-                                best_dbscan['silhouette score'] = silhouette
-                                best_dbscan['silhouette param'] = {'eps': eps_value,
-                                                                    'min_samples': minSamples, 'algorithm': algo}
-                                best_dbscan['silhouette idx'] = idx
->>>>>>> b2f9e53dbe2aea4e98e5097ec0c1a18c30385c41
 
                 idx += 1
 
@@ -539,14 +407,14 @@ def findBestCluster(X, y):
                 predict = cluster.predict(x)
 
                 silhouette = silhouette_score(x, predict, metric='euclidean')
-                if best_meanShift['silhouette score'] is None or best_meanShift['silhouette score'] < silhouette:
+                if best_meanShift['silhouette score'] == None or best_meanShift['silhouette score'] < silhouette:
                     best_meanShift['silhouette score'] = silhouette
                     best_meanShift['silhouette param'] = cluster.best_params_
                     best_meanShift['silhouette idx'] = idx
 
                 p = contingency_matrix(y[idx], predict)
                 purity = np.sum(np.amax(p, axis=0)) / np.sum(p)
-                if best_meanShift['purity'] is None or best_meanShift['purity'] < purity:
+                if best_meanShift['purity'] == None or best_meanShift['purity'] < purity:
                     best_meanShift['purity'] = purity
                     best_meanShift['purity param'] = cluster.best_params_
                     best_meanShift['purity idx'] = idx
@@ -586,14 +454,14 @@ def findBestCluster(X, y):
                 predict = cluster.predict(x)
 
                 silhouette = silhouette_score(x, predict, metric='euclidean')
-                if best_affinity['silhouette score'] is None or best_affinity['silhouette score'] < silhouette:
+                if best_affinity['silhouette score'] == None or best_affinity['silhouette score'] < silhouette:
                     best_affinity['silhouette score'] = silhouette
                     best_affinity['silhouette param'] = cluster.best_params_
                     best_affinity['silhouette idx'] = idx
 
                 p = contingency_matrix(y, predict)
                 purity = np.sum(np.amax(p, axis=0)) / np.sum(p)
-                if best_affinity['purity'] is None or best_affinity['purity'] < purity:
+                if best_affinity['purity'] == None or best_affinity['purity'] < purity:
                     best_affinity['purity'] = purity
                     best_affinity['purity param'] = cluster.best_params_
                     best_affinity['purity idx'] = idx
@@ -602,7 +470,6 @@ def findBestCluster(X, y):
         '''
 
     result = [best_kmeans, best_em, best_dbscan, best_meanShift]
-
     return result
 
 
@@ -630,13 +497,8 @@ def plotCluster(X, param_list):
             u_labels = np.unique(label)
             centroids = np.array(model.cluster_centers_)
             for k in u_labels:
-<<<<<<< HEAD
                 plt.scatter(data[label==k, 0], data[label==k, 1], label=k)
             plt.scatter(centroids[:,0], centroids[:,1], s=80, marker='x', color='k')
-=======
-                plt.scatter(data[label == k, 0], data[label == k, 1], label=k)
-            plt.scatter(centroids[:, 0], centroids[:, 1], s=80, marker='x', color='k')
->>>>>>> b2f9e53dbe2aea4e98e5097ec0c1a18c30385c41
             plt.title("KMeans\nBest Silhouette")
             plt.legend()
             plt.show()
@@ -696,24 +558,19 @@ def plotCluster(X, param_list):
             labels = model.labels_
 
             u_labels = set(labels)
-            colors = [plt.cm.Spectral(each) for each in np.linspace(0, 1, len(u_labels))]
+            colors = [plt.cm.Spectral(each) for each in np.linspace(0,1,len(u_labels))]
             for k, col in zip(u_labels, colors):
-                if k == -1:
-                    col = [0, 0, 0, 1]
+                if k==-1:
+                    col = [0,0,0,1]
                 class_member_mask = labels == k
 
                 xy = data[class_member_mask & core_samples_mask]
-                plt.plot(xy[:, 0], xy[:, 1], "o", markerfacecolor=tuple(col), markeredgecolor="k")
+                plt.plot(xy[:,0], xy[:,1], "o", markerfacecolor=tuple(col), markeredgecolor="k")
 
                 xy = data[class_member_mask & ~core_samples_mask]
-<<<<<<< HEAD
                 plt.plot(xy[:,0], xy[:, 1], "o", markerfacecolor=tuple(col), markeredgecolor="k")
             plt.title("DBSCAN\nBest Silhouette")
             plt.legend()
-=======
-                plt.plot(xy[:, 0], xy[:, 1], "o", markerfacecolor=tuple(col), markeredgecolor="k")
-            plt.title("DBSCAN\nBest Silhouette")
->>>>>>> b2f9e53dbe2aea4e98e5097ec0c1a18c30385c41
             plt.show()
 
         # MeanShift
@@ -735,10 +592,7 @@ def plotCluster(X, param_list):
                 plt.plot(data[my_members, 0], data[my_members, 1], col+".")
                 plt.plot(cluster_center[0], cluster_center[1], "o", markerfacecolor=col, markeredgecolor="k")
             plt.title("MeanShift\nBest Silhouette")
-<<<<<<< HEAD
             plt.legend()
-=======
->>>>>>> b2f9e53dbe2aea4e98e5097ec0c1a18c30385c41
             plt.show()
 
             # Plot the cluster with the highest purity.
@@ -758,10 +612,7 @@ def plotCluster(X, param_list):
                 plt.plot(data[my_members, 0], data[my_members, 1], col + ".")
                 plt.plot(cluster_center[0], cluster_center[1], "o", markerfacecolor=col, markeredgecolor="k")
             plt.title("MeanShift\nBest Purity")
-<<<<<<< HEAD
             plt.legend()
-=======
->>>>>>> b2f9e53dbe2aea4e98e5097ec0c1a18c30385c41
             plt.show()
 
 
@@ -773,30 +624,10 @@ print(original.info())
 print(original.describe())
 print(original.isnull().sum())  # It is a clean dataset without missing values.
 
+# Start dataset preprocessing
+original.apply(pd.unique)
+
 # Drop unuseful columns "ID" and "FLAG_MOBIL"
 data = original.drop(["ID", "FLAG_MOBIL"], axis=1)
 
 auto_ml(data)
-<<<<<<< HEAD
-=======
-
-"""
-intuitive_cluster = findBestCluster(intuitive_fs, preprocessed_target)
-print(intuitive_cluster)
-kBest_cluster = findBestCluster(kBest_fs, preprocessed_target)
-print(kBest_cluster)
-rfe_cluster = findBestCluster(rfe_fs, preprocessed_target)
-print(rfe_cluster)
-sfm_cluster = findBestCluster(sfm_fs, preprocessed_target)
-print(sfm_cluster)
-
-# 각 변수는 [{kmeans}, {em}, {clarans}, {affinity propagation}]에 대한 정보를 담고 있음
-# 각 모델의 dict는 'best similarity score'와 그 param, idx, 'best purity'와 그 param, idx가 들어있음
-# dbscan의 purity 부분은 비어있음
-
-plotClustering(intuitive_fs, intuitive_cluster)
-plotClustering(kBest_fs, kBest_cluster)
-plotClustering(rfe_fs, rfe_cluster)
-plotClustering(sfm_fs, sfm_cluster)
-"""
->>>>>>> b2f9e53dbe2aea4e98e5097ec0c1a18c30385c41
