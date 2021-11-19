@@ -22,31 +22,19 @@ from xgboost import XGBClassifier
 warnings.filterwarnings("ignore")
 
 
-def auto_ml_classification(df):
-    # Feature selection
-    intuitive_fs, k_best_fs, rfe_fs, sfm_fs, preprocessed_target_smote = feature_selection(df)
+def data_refining(df):
+    print(df)
+    print(df.info())
+    print(df.describe())
+    print(df.isnull().sum())  # 0 means clean dataset without missing values.
 
-    # Classification
-    find_best_classification(intuitive_fs, preprocessed_target_smote)
-    find_best_classification(k_best_fs, preprocessed_target_smote)
-    find_best_classification(rfe_fs, preprocessed_target_smote)
-    find_best_classification(sfm_fs, preprocessed_target_smote)
+    # Start dataset preprocessing
+    df.apply(pd.unique)
 
+    # Drop unuseful columns "ID" and "FLAG_MOBIL"
+    df = df.drop(["ID", "FLAG_MOBIL"], axis=1)
 
-def auto_ml_clustering(df):
-    # Feature selection
-    intuitive_fs, k_best_fs, rfe_fs, sfm_fs, preprocessed_target_smote = feature_selection(df)
-
-    # Clustering
-    #intuitive_cluster = find_best_cluster(intuitive_fs, preprocessed_target_smote)
-    #k_best_cluster = find_best_cluster(k_best_fs, preprocessed_target_smote)
-    rfe_cluster = find_best_cluster(rfe_fs, preprocessed_target_smote)
-    sfm_cluster = find_best_cluster(sfm_fs, preprocessed_target_smote)
-
-    #plot_cluster(intuitive_fs, intuitive_cluster)
-    #plot_cluster(k_best_fs, k_best_cluster)
-    plot_cluster(rfe_fs, rfe_cluster)
-    plot_cluster(sfm_fs, sfm_cluster)
+    return df
 
 
 def feature_selection(df):
@@ -126,6 +114,33 @@ def feature_selection(df):
     return intuitive_fs, k_best_fs, rfe_fs, sfm_fs, preprocessed_target_smote
 
 
+def auto_ml_classification(df, models, model_names, param_grid_1, param_grid_2, param_grid_3):
+    # Feature selection
+    intuitive_fs, k_best_fs, rfe_fs, sfm_fs, preprocessed_target_smote = feature_selection(df)
+
+    # Classification
+    find_best_classification(intuitive_fs, preprocessed_target_smote, models, model_names, param_grid_1, param_grid_2, param_grid_3)
+    find_best_classification(k_best_fs, preprocessed_target_smote, models, model_names, param_grid_1, param_grid_2, param_grid_3)
+    find_best_classification(rfe_fs, preprocessed_target_smote, models, model_names, param_grid_1, param_grid_2, param_grid_3)
+    find_best_classification(sfm_fs, preprocessed_target_smote, models, model_names, param_grid_1, param_grid_2, param_grid_3)
+
+
+def auto_ml_clustering(df, model_names, param_1, param_2, param_3, param_4):
+    # Feature selection
+    intuitive_fs, k_best_fs, rfe_fs, sfm_fs, preprocessed_target_smote = feature_selection(df)
+
+    # Clustering
+    intuitive_cluster = find_best_cluster(intuitive_fs, preprocessed_target_smote, model_names, param_1, param_2, param_3, param_4)
+    k_best_cluster = find_best_cluster(k_best_fs, preprocessed_target_smote, model_names, param_1, param_2, param_3, param_4)
+    rfe_cluster = find_best_cluster(rfe_fs, preprocessed_target_smote, model_names, param_1, param_2, param_3, param_4)
+    sfm_cluster = find_best_cluster(sfm_fs, preprocessed_target_smote, model_names, param_1, param_2, param_3, param_4)
+
+    plot_cluster(intuitive_fs, intuitive_cluster)
+    plot_cluster(k_best_fs, k_best_cluster)
+    plot_cluster(rfe_fs, rfe_cluster)
+    plot_cluster(sfm_fs, sfm_cluster)
+
+
 def encode_scale(df, numerical_feature_list, categorical_feature_list, target_name, scalers=None, encoders=None,
                  fill_nan=None, outliers=None):
     """ @params
@@ -199,27 +214,20 @@ def encode_scale(df, numerical_feature_list, categorical_feature_list, target_na
     return encoded_scaled_df_list, encoded_target
 
 
-def find_best_classification(x_list, y):
+def find_best_classification(x_list, y, models, model_names, param_grid_1, param_grid_2, param_grid_3):
     """
     find the set of best parameters among classification algorithms according to silhouette score and purity.
     :param x_list: list of data encoded and scaled with specified features
     :param y: target feature
+    :param models: list of model classes
+    :param model_names: list of model name strings
+    :param param_grid_1, param_grid_2, param_grid_3: dictionary of model parameters grid
     return
     list[{decisionTree}, {logisticRegression}, {svm}]
     each dict contains best precision, recall, f1 score, params, idx.
     """
-    # Models
-    models = [DecisionTreeClassifier(), LogisticRegression(), XGBClassifier()]
-    model_names = ['DecisionTreeClassifier', 'LogisticRegression', 'XGB']
-
-    # Parameter grids
-    decision_tree_param_grid = {'criterion': ['entropy', 'gini'], 'max_depth': [3, 4, 5],
-                                'min_samples_split': [2, 4, 6], 'min_samples_leaf': [1, 3, 5]}
-    logistic_regression_param_grid = {'penalty': ['l2'], 'C': np.logspace(-4, 4, 20),
-                                      'solver': ['newton-cg', 'lbfgs', 'liblinear']}
-    xgb_param_grid = {'n_estimators': [100, 300, 500, 1000], 'learning_rate': [0.01, 0.1, 1, 10],
-                      'max_depth': [4, 8, 12]}
-    param_grids = [decision_tree_param_grid, logistic_regression_param_grid, xgb_param_grid]
+    # Parameter grids list
+    param_grids = [param_grid_1, param_grid_2, param_grid_3]
 
     # Scoring criteria
     scorers = {'precision_score': make_scorer(precision_score),
@@ -283,8 +291,7 @@ def viz_classification(model, x, y, normalize, mode=None):
     """
     # mode - confusion_matrix
     if "cfm" in mode:
-        plot = plot_confusion_matrix(model, x, y,
-                                     normalize=normalize)
+        plot = plot_confusion_matrix(model, x, y, normalize=normalize)
         plot.ax_.set_title("Confusion Matrix")
 
     if "roc" in mode:
@@ -296,90 +303,83 @@ def viz_classification(model, x, y, normalize, mode=None):
         plot.ax_.set_title("Precision-Recall curve")
 
 
-def find_best_cluster(X, y):
+def find_best_cluster(X, y, model_names, param_1, param_2, param_3, param_4):
     """
     find set of best parameters of each cluster algorithm according to silhouette score and purity.
-    :param x: list of data scaled with each scaler
+    :param X: list of data scaled with each scaler
     :param y: target feature
+    :param model_names: list of model name strings
+    :param param_1, param_2, param_3, param_4: dictionary of model parameters grid
     return
-    list[{kmeans}, {em}, {clarans}, {affinity propagation}]
-    each dict contains best silhouette score, params, idx and best purity, params, idx.
+    list[{model_1}, {model_2}, {model_3}, {model_4}]
+    each dict contains its model's best silhouette score, params, idx and best purity, params, idx.
     """
 
-    best_kmeans = {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None,
-                   'purity': None, 'purity param': None, 'purity idx': None}
-    best_em = {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None,
-               'purity': None, 'purity param': None, 'purity idx': None}
-    best_dbscan = {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None,
-                   'purity': None, 'purity param': None, 'purity idx': None}
-    best_mean_shift = {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None,
-                      'purity': None, 'purity param': None, 'purity idx': None}
+    best_result_1 = {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None,
+                     'purity': None, 'purity param': None, 'purity idx': None}
+    best_result_2 = {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None,
+                     'purity': None, 'purity param': None, 'purity idx': None}
+    best_result_3 = {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None,
+                     'purity': None, 'purity param': None, 'purity idx': None}
+    best_result_4 = {'silhouette score': None, 'silhouette param': None, 'silhouette idx': None,
+                     'purity': None, 'purity param': None, 'purity idx': None}
 
-    # models = ['kmeans', 'em', 'dbscan', 'meanShift']
-    models = ['meanShift']
-    kmeans_param = {'n_clusters': [3, 4, 7, 10, 30, 50, 80, 100, 200], 'algorithm': ['full', 'elkan']}
-    em_param = {'n_components': [3, 5, 10, 30, 50, 80, 100, 200], 'covariance_type': ['full', 'tied'],
-                'tol': [1e-2, 1e-3, 1e-4]}
-    dbscan_param = {'eps': [0.2, 0.3, 0.5, 0.7, 0.9, 1.2], 'min_samples': [3, 4, 5, 7, 10, 30, 50, 100]}
-    mean_shift_param = {'bandwidth': [0.5, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]}
-
-    for model_name in models:
-
+    for model_name in model_names:
         # KMeans
-        if model_name == 'kmeans':
+        if model_name == 'KMeans':
             model = KMeans()
             idx = 0
             for x in X:
-                cluster = GridSearchCV(estimator=model, param_grid=kmeans_param, cv=3, scoring='accuracy')
+                cluster = GridSearchCV(estimator=model, param_grid=param_1, cv=3, scoring='accuracy')
                 cluster.fit(x, y[idx])
                 predict = cluster.predict(x)
 
                 silhouette = silhouette_score(x, predict, metric='euclidean')
-                if best_kmeans['silhouette score'] is None or best_kmeans['silhouette score'] < silhouette:
-                    best_kmeans['silhouette score'] = silhouette
-                    best_kmeans['silhouette param'] = cluster.best_params_
-                    best_kmeans['silhouette idx'] = idx
+                if best_result_1['silhouette score'] is None or best_result_1['silhouette score'] < silhouette:
+                    best_result_1['silhouette score'] = silhouette
+                    best_result_1['silhouette param'] = cluster.best_params_
+                    best_result_1['silhouette idx'] = idx
 
                 p = contingency_matrix(y[idx], predict)
                 purity = np.sum(np.amax(p, axis=0)) / np.sum(p)
-                if best_kmeans['purity'] is None or best_kmeans['purity'] < purity:
-                    best_kmeans['purity'] = purity
-                    best_kmeans['purity param'] = cluster.best_params_
-                    best_kmeans['purity idx'] = idx
+                if best_result_1['purity'] is None or best_result_1['purity'] < purity:
+                    best_result_1['purity'] = purity
+                    best_result_1['purity param'] = cluster.best_params_
+                    best_result_1['purity idx'] = idx
 
                 idx += 1
 
         # Gaussian Mixture(EM)
-        elif model_name == 'em':
+        elif model_name == 'EM':
             model = GaussianMixture()
             idx = 0
             for x in X:
-                cluster = GridSearchCV(estimator=model, param_grid=em_param, cv=3, scoring='accuracy')
+                cluster = GridSearchCV(estimator=model, param_grid=param_2, cv=3, scoring='accuracy')
                 cluster.fit(x, y[idx])
                 predict = cluster.predict(x)
 
                 silhouette = silhouette_score(x, predict, metric='euclidean')
-                if best_em['silhouette score'] is None or best_em['silhouette score'] < silhouette:
-                    best_em['silhouette score'] = silhouette
-                    best_em['silhouette param'] = cluster.best_params_
-                    best_em['silhouette idx'] = idx
+                if best_result_2['silhouette score'] is None or best_result_2['silhouette score'] < silhouette:
+                    best_result_2['silhouette score'] = silhouette
+                    best_result_2['silhouette param'] = cluster.best_params_
+                    best_result_2['silhouette idx'] = idx
 
                 p = contingency_matrix(y[idx], predict)
                 purity = np.sum(np.amax(p, axis=0)) / np.sum(p)
-                if best_em['purity'] is None or best_em['purity'] < purity:
-                    best_em['purity'] = purity
-                    best_em['purity param'] = cluster.best_params_
-                    best_em['purity idx'] = idx
+                if best_result_2['purity'] is None or best_result_2['purity'] < purity:
+                    best_result_2['purity'] = purity
+                    best_result_2['purity param'] = cluster.best_params_
+                    best_result_2['purity idx'] = idx
 
                 idx += 1
 
         # DBSCAN
-        elif model_name == 'dbscan':
+        elif model_name == 'DBSCAN':
             idx = 0
             for x in enumerate(X):
                 input_list = x[1].values.tolist()
-                for eps_value in dbscan_param['eps']:
-                    for minSamples in dbscan_param['min_samples']:
+                for eps_value in param_3['eps']:
+                    for minSamples in param_3['min_samples']:
                         cluster = DBSCAN(eps=eps_value, min_samples=minSamples)
                         cluster.fit(input_list)
                         core_samples_mask = np.zeros_like(cluster.labels_, dtype=bool)
@@ -387,46 +387,46 @@ def find_best_cluster(X, y):
                         labels = cluster.labels_
 
                         silhouette = silhouette_score(input_list, labels)
-                        if best_dbscan['silhouette score'] is None or best_dbscan['silhouette score'] < silhouette:
-                            best_dbscan['silhouette score'] = silhouette
-                            best_dbscan['silhouette param'] = {'eps': eps_value, 'min_samples': minSamples}
-                            best_dbscan['silhouette idx'] = idx
+                        if best_result_3['silhouette score'] is None or best_result_3['silhouette score'] < silhouette:
+                            best_result_3['silhouette score'] = silhouette
+                            best_result_3['silhouette param'] = {'eps': eps_value, 'min_samples': minSamples}
+                            best_result_3['silhouette idx'] = idx
 
                 idx += 1
 
         # Mean Shift
-        elif model_name == 'meanShift':
+        elif model_name == 'MeanShift':
             model = MeanShift()
             idx = 0
             for x in X:
-                cluster = GridSearchCV(estimator=model, param_grid=mean_shift_param, cv=3, scoring='accuracy', n_jobs=4)
+                cluster = GridSearchCV(estimator=model, param_grid=param_4, cv=3, scoring='accuracy', n_jobs=4)
                 cluster.fit(x, y[idx])
                 predict = cluster.predict(x)
 
                 silhouette = silhouette_score(x, predict, metric='euclidean')
-                if best_mean_shift['silhouette score'] is None or best_mean_shift['silhouette score'] < silhouette:
-                    best_mean_shift['silhouette score'] = silhouette
-                    best_mean_shift['silhouette param'] = cluster.best_params_
-                    best_mean_shift['silhouette idx'] = idx
+                if best_result_4['silhouette score'] is None or best_result_4['silhouette score'] < silhouette:
+                    best_result_4['silhouette score'] = silhouette
+                    best_result_4['silhouette param'] = cluster.best_params_
+                    best_result_4['silhouette idx'] = idx
 
                 p = contingency_matrix(y[idx], predict)
                 purity = np.sum(np.amax(p, axis=0)) / np.sum(p)
-                if best_mean_shift['purity'] is None or best_mean_shift['purity'] < purity:
-                    best_mean_shift['purity'] = purity
-                    best_mean_shift['purity param'] = cluster.best_params_
-                    best_mean_shift['purity idx'] = idx
+                if best_result_4['purity'] is None or best_result_4['purity'] < purity:
+                    best_result_4['purity'] = purity
+                    best_result_4['purity param'] = cluster.best_params_
+                    best_result_4['purity idx'] = idx
 
                 idx += 1
 
-        print(model_name + "'s best silhouette score:", best_mean_shift['silhouette score'])
-        print(model_name + "'s best silhouette parameters:", best_mean_shift['silhouette param'])
-        print('Target Data index:', best_mean_shift['silhouette idx'])
+        print(model_name + "'s best silhouette score:", best_result_4['silhouette score'])
+        print(model_name + "'s best silhouette parameters:", best_result_4['silhouette param'])
+        print('Target Data index:', best_result_4['silhouette idx'])
         print()
-        print(model_name + "'s best purity score:", best_mean_shift['purity'])
-        print(model_name + "'s best parameters:", best_mean_shift['purity param'])
-        print('Target Data index:', best_mean_shift['purity idx'])
+        print(model_name + "'s best purity score:", best_result_4['purity'])
+        print(model_name + "'s best parameters:", best_result_4['purity param'])
+        print('Target Data index:', best_result_4['purity idx'])
 
-    result = [best_kmeans, best_em, best_dbscan, best_mean_shift]
+    result = [best_result_1, best_result_2, best_result_3, best_result_4]
 
     return result
 
@@ -440,13 +440,13 @@ def plot_cluster(X, param_list):
         data_pca = pca.fit_transform(x)
         x_pca.append(data_pca)
 
-    for i in 0:
+    for i in range(0, 4):
         param = param_list[i]
         if param['silhouette score'] is None:
             return
 
         # KMeans
-        if i == 3:
+        if i == 0:
             # Plot the cluster with the highest silhouette score.
             data_pca = x_pca[param['silhouette idx']]
             model = KMeans(n_clusters=param['silhouette param']['n_clusters'],
@@ -534,7 +534,7 @@ def plot_cluster(X, param_list):
             plt.show()
 
         # MeanShift
-        elif i == 0:
+        elif i == 3:
             # Plot the cluster with the highest silhouette score.
             data_pca = x_pca[param['silhouette idx']]
             model = MeanShift(bandwidth=param['silhouette param']['bandwidth'])
@@ -579,15 +579,33 @@ def plot_cluster(X, param_list):
 # Read the dataset
 original = pd.read_csv('credit_dataset.csv', index_col=0)
 
-print(original)
-print(original.info())
-print(original.describe())
-print(original.isnull().sum())  # It is a clean dataset without missing values.
+# Auto data refining
+data = data_refining(original)
 
-# Start dataset preprocessing
-original.apply(pd.unique)
+# Auto classification step 1: Set the models for auto classification
+models_list = [DecisionTreeClassifier(), LogisticRegression(), XGBClassifier()]
+model_names_list = ['DecisionTreeClassifier', 'LogisticRegression', 'XGB']
 
-# Drop unuseful columns "ID" and "FLAG_MOBIL"
-data = original.drop(["ID", "FLAG_MOBIL"], axis=1)
+# Auto classification step 2: Set the parameters for auto classification
+decision_tree_param_grid = {'criterion': ['entropy', 'gini'], 'max_depth': [3, 4, 5],
+                            'min_samples_split': [2, 4, 6], 'min_samples_leaf': [1, 3, 5]}
+logistic_regression_param_grid = {'penalty': ['l2'], 'C': np.logspace(-4, 4, 20),
+                                  'solver': ['newton-cg', 'lbfgs', 'liblinear']}
+xgb_param_grid = {'n_estimators': [100, 300, 500, 1000], 'learning_rate': [0.01, 0.1, 1, 10], 'max_depth': [4, 8, 12]}
 
-auto_ml_clustering(data)
+# Auto classification step 3: Call the auto classification function
+auto_ml_classification(data, models_list, model_names_list,
+                       decision_tree_param_grid, logistic_regression_param_grid, xgb_param_grid)
+
+# Auto classification step 1: Set the models for auto clustering
+model_names_list = ['KMeans', 'EM', 'DBSCAN', 'MeanShift']
+
+# Auto classification step 2: Set the parameters for auto clustering
+kmeans_param = {'n_clusters': [3, 4, 7, 10, 30, 50, 80, 100, 200], 'algorithm': ['full', 'elkan']}
+em_param = {'n_components': [3, 5, 10, 30, 50, 80, 100, 200], 'covariance_type': ['full', 'tied'],
+            'tol': [1e-2, 1e-3, 1e-4]}
+dbscan_param = {'eps': [0.2, 0.3, 0.5, 0.7, 0.9, 1.2], 'min_samples': [3, 4, 5, 7, 10, 30, 50, 100]}
+mean_shift_param = {'bandwidth': [0.5, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]}
+
+# Auto classification step 3: Call the auto classification function
+auto_ml_clustering(data, model_names_list, kmeans_param, em_param, dbscan_param, mean_shift_param)
