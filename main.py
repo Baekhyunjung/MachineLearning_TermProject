@@ -236,7 +236,7 @@ def find_best_classification(x_list, y):
     """
     # Models
     models = [DecisionTreeClassifier(), LogisticRegression(), XGBClassifier()]
-    model_names = ['DecisionTreeClassifier', 'LogisticRegression', 'SVM']
+    model_names = ['DecisionTreeClassifier', 'LogisticRegression', 'XGB']
 
     # Parameter grids
     decision_tree_param_grid = {'criterion': ['entropy', 'gini'], 'max_depth': [3, 4, 5],
@@ -245,7 +245,6 @@ def find_best_classification(x_list, y):
                                       'solver': ['newton-cg', 'lbfgs', 'liblinear']}
     xgb_param_grid = {'n_estimators': [100, 300, 500, 1000], 'learning_rate': [0.01, 0.1, 1, 10],
                       'max_depth': [4, 8, 12]}
-
     param_grids = [decision_tree_param_grid, logistic_regression_param_grid, xgb_param_grid]
 
     # Scoring criteria
@@ -620,7 +619,7 @@ def plotCluster(X, param_list):
 
 
 # Read the dataset
-original = pd.read_csv('C:\\Users\\ka030\\Desktop\\credit_dataset.csv', index_col=0)
+original = pd.read_csv('credit_dataset.csv', index_col=0)
 
 print(original)
 print(original.info())
